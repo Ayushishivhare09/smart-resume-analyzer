@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeIQ — AI Career Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- THEME TOGGLE -->
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">🌙</button>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+<div id="pageFlash"></div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="ld-skeleton">
+    <div class="skeleton-box skeleton-title"></div>
+    <div class="skeleton-box skeleton-text"></div>
+    <div class="skeleton-steps">
+      <div class="skeleton-step"></div>
+      <div class="skeleton-step"></div>
+      <div class="skeleton-step"></div>
+      <div class="skeleton-step"></div>
+      <div class="skeleton-step"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <div id="loginForm">
+      <h2>Welcome back 👋</h2>
+      <p>Sign in to access your resume dashboard</p>
+      <div class="form-error" id="loginErr"></div>
+      <div class="form-group"><label class="form-label">Email</label>
+        <input class="form-input" id="loginEmail" type="email" placeholder="you@example.com"></div>
+      <div class="form-group"><label class="form-label">Password</label>
+        <input class="form-input" id="loginPass" type="password" placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+      <div class="form-divider">or</div>
+      <div style="text-align:center;font-size:13px;color:var(--t2)">Don't have an account? <span class="form-link" onclick="toggleAuth()">Sign up</span></div>
+    </div>
+    <div id="signupForm" style="display:none">
+      <h2>Create account ✨</h2>
+      <p>Start analyzing resumes with AI</p>
+      <div class="form-error" id="signupErr"></div>
+      <div class="form-group"><label class="form-label">Full Name</label>
+        <input class="form-input" id="signupName" type="text" placeholder="John Doe"></div>
+      <div class="form-group"><label class="form-label">Email</label>
+        <input class="form-input" id="signupEmail" type="email" placeholder="you@example.com"></div>
+      <div class="form-group"><label class="form-label">Password</label>
+        <input class="form-input" id="signupPass" type="password" placeholder="At least 6 characters"></div>
+      <button class="btn btn-primary btn-full" onclick="doSignup()">Create Account</button>
+      <div class="form-divider">or</div>
+      <div style="text-align:center;font-size:13px;color:var(--t2)">Already have an account? <span class="form-link" onclick="toggleAuth()">Sign in</span></div>
+    </div>
+    <div style="text-align:center;margin-top:16px"><span class="form-link" onclick="closeModal('authModal')">✕ Close</span></div>
+  </div>
+</div>
+
+<!-- PAGE 1: LANDING -->
+<div class="page active" id="pg-landing">
+  <nav>
+    <div class="logo" onclick="showPage('pg-landing')"><div class="logo-mark">🧠</div>ResumeIQ</div>
+    <div class="nav-links">
+      <button class="nav-link" onclick="showPage('pg-landing')">Home</button>
+      <button class="nav-link" onclick="requireAuth('pg-analyze')">Analyze</button>
+    </div>
+    <div id="landingNav">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="openModal('authModal')">Sign In</button>
+        <button class="btn btn-primary" onclick="openModal('authModal');toggleAuth(false)">Get Started</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero-section">
+    <div class="badge"><span class="badge-dot"></span>AI-POWERED CAREER PLATFORM</div>
+    <h1 class="hero-title" id="heroTitle">
+      <span class="hero-word" style="animation-delay:.1s">Analyze.</span><br>
+      <span class="hero-word grad" style="animation-delay:.3s">Optimize.</span><br>
+      <span class="hero-word" style="animation-delay:.5s">Get Hired.</span>
+    </h1>
+    <p class="hero-sub" style="opacity:0;animation:fadeUp .7s .55s cubic-bezier(.22,1,.36,1) forwards">Get ATS scores, keyword analysis, skill gap detection, cover letter generation, interview prep, and job tracking — all in one place.</p>
+    <div class="hero-ctas" style="opacity:0;animation:fadeUp .7s .72s cubic-bezier(.22,1,.36,1) forwards">
+      <button class="hero-cta-primary" onclick="openModal('authModal');toggleAuth(false)">🚀 Analyze My Resume</button>
+      <button class="hero-cta-ghost" onclick="requireAuth('pg-analyze')">View Demo →</button>
+    </div>
+  </div>
+
+  <div class="features">
+    <h2>Everything you need to<br><span>land your dream job</span></h2>
+    <div class="feat-grid stagger">
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(79,158,255,0.12)">🤖</div>
+        <div class="feat-title">AI Resume Analysis</div>
+        <div class="feat-desc">Deep analysis across 12 dimensions — ATS score, keyword density, formatting, impact metrics and more.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(52,211,153,0.12)">🎯</div>
+        <div class="feat-title">Job Match Scoring</div>
+        <div class="feat-desc">Paste any job description and get an instant match score with keyword gap analysis.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(167,139,250,0.12)">✍️</div>
+        <div class="feat-title">Cover Letter Generator</div>
+        <div class="feat-desc">AI generates a personalized, job-specific cover letter from your resume in seconds.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(245,158,11,0.12)">🎤</div>
+        <div class="feat-title">Interview Prep</div>
+        <div class="feat-desc">Get role-specific interview questions with model answers tailored to your experience.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(248,113,113,0.12)">📋</div>
+        <div class="feat-title">Job Application Tracker</div>
+        <div class="feat-desc">Kanban board to track all your applications from Applied → Interview → Offer.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon" style="background:rgba(79,158,255,0.12)">📊</div>
+        <div class="feat-title">Analysis History</div>
+        <div class="feat-desc">Save every analysis, compare versions, and track your resume score improvements over time.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">🧠 ResumeIQ</div>
+    <div class="footer-copy"></div>
+    <div class="footer-links"><a>Privacy</a><a>Terms</a><a>Support</a></div>
+  </div>
+</div>
+
+<!-- PAGE 2: DASHBOARD -->
+<div class="page" id="pg-dashboard">
+  <nav>
+    <div class="logo" onclick="showPage('pg-landing')"><div class="logo-mark">🧠</div>ResumeIQ</div>
+    <div class="nav-links">
+      <button class="nav-link active" onclick="showDashTab('overview')">Dashboard</button>
+      <button class="nav-link" onclick="showPage('pg-analyze')">New Analysis</button>
+    </div>
+    <div class="nav-user">
+      <span id="navUserName" style="font-size:13px;color:var(--t2)"></span>
+      <div class="avatar" id="navAvatar" onclick="showDashTab('profile')"></div>
+      <button class="btn btn-ghost" style="font-size:12px" onclick="doSignout()">Sign Out</button>
+    </div>
+  </nav>
+  <div class="dash-layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Main</div>
+      <button class="sidebar-item active" id="si-overview" onclick="showDashTab('overview')"><span class="si-icon">📊</span>Overview</button>
+      <button class="sidebar-item" id="si-history" onclick="showDashTab('history')"><span class="si-icon">🕐</span>History<span class="sidebar-badge" id="histBadge">0</span></button>
+      <button class="sidebar-item" id="si-analyze" onclick="showPage('pg-analyze')"><span class="si-icon">✨</span>New Analysis</button>
+      <div class="sidebar-section">Tools</div>
+      <button class="sidebar-item" id="si-coverletter" onclick="showDashTab('coverletter')"><span class="si-icon">✍️</span>Cover Letter</button>
+      <button class="sidebar-item" id="si-interview" onclick="showDashTab('interview')"><span class="si-icon">🎤</span>Interview Prep</button>
+      <button class="sidebar-item" id="si-tracker" onclick="showDashTab('tracker')"><span class="si-icon">📋</span>Job Tracker</button>
+      <div class="sidebar-section">Account</div>
+      <button class="sidebar-item" id="si-profile" onclick="showDashTab('profile')"><span class="si-icon">👤</span>Profile</button>
+      <button class="sidebar-item" id="si-settings" onclick="showDashTab('settings')"><span class="si-icon">⚙️</span>Settings</button>
+      <button class="sidebar-item" onclick="doSignout()"><span class="si-icon">🚪</span>Sign Out</button>
+    </div>
+    <div class="dash-content" id="dashContent"></div>
+  </div>
+</div>
+
+<!-- PAGE 3: ANALYZE -->
+<div class="page" id="pg-analyze">
+  <nav>
+    <div class="logo" onclick="goDashboard()"><div class="logo-mark">🧠</div>ResumeIQ</div>
+    <div class="nav-links"><button class="nav-link" onclick="goDashboard()">← Dashboard</button></div>
+    <div class="nav-user">
+      <div class="avatar" id="navAvatar2" onclick="goDashboard()"></div>
+      <button class="btn btn-ghost" style="font-size:12px" onclick="doSignout()">Sign Out</button>
+    </div>
+  </nav>
+  <div style="max-width:860px;margin:0 auto;padding:36px 24px 80px;flex:1">
+    <div class="section-header">
+      <div><div class="section-title">New Analysis</div><div class="section-sub">Paste your resume and optionally a job description</div></div>
+    </div>
+    <div class="drop-zone" id="analyzeDropZone" onclick="document.getElementById('analyzeFileInput').click()" style="margin-bottom:16px">
+      <input type="file" id="analyzeFileInput" accept=".txt,.pdf,.doc,.docx" style="display:none" onchange="handleAnalyzeFile(event)">
+      <div class="dz-icon" id="dzIcon">📄</div>
+      <div class="dz-title" id="dzTitle">Drop resume or click to upload</div>
+      <div class="dz-sub" id="dzSub">PDF, DOCX, TXT — or paste text below</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
+        <span class="chip chip-blue">PDF</span><span class="chip chip-blue">DOCX</span><span class="chip chip-blue">TXT</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px">
+        <div style="width:3px;height:12px;background:var(--a);border-radius:2px"></div>Resume Text *
+      </div>
+      <div style="position:relative">
+        <textarea class="form-input" id="analyzeResume" rows="10" placeholder="Paste your full resume here — name, work experience, skills, education, certifications, achievements..." oninput="countC(this,'rC')"></textarea>
+        <div style="position:absolute;bottom:10px;right:12px;font-size:11px;color:var(--t3)" id="rC">0 chars</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px">
+        <div style="width:3px;height:12px;background:var(--a2);border-radius:2px"></div>Job Description <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0;font-size:12px">(recommended)</span>
+      </div>
+      <div style="position:relative">
+        <textarea class="form-input" id="analyzeJD" rows="6" placeholder="Paste the job description for keyword matching, skill gap analysis, and tailored suggestions..." oninput="countC(this,'jC')"></textarea>
+        <div style="position:absolute;bottom:10px;right:12px;font-size:11px;color:var(--t3)" id="jC">0 chars</div>
+      </div>
+    </div>
+    <div style="position:relative">
+      <select class="form-input" id="analyzeRole" style="margin-bottom:14px">
+        <option value="">Select target role (optional)</option>
+        <option>Software Engineer</option><option>Data Scientist</option><option>Product Manager</option>
+        <option>UX Designer</option><option>Marketing Manager</option><option>Sales Executive</option>
+        <option>DevOps Engineer</option><option>Data Analyst</option><option>Business Analyst</option>
+        <option>Project Manager</option><option>Finance Analyst</option><option>HR Manager</option>
+      </select>
+    </div>
+    <div id="analyzeErr" style="display:none;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:12px 16px;color:var(--danger);font-size:13px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:12px">
+      <button onclick="startAnalysis()" class="btn btn-primary" style="flex:1;padding:16px;font-size:16px;font-weight:800">
+        🚀 Analyze with AI
+      </button>
+      <button onclick="checkATSScoreOnly()" class="btn btn-ghost" style="padding:16px;font-size:16px;font-weight:700;border:1px solid var(--border)">
+        📊 Check ATS Score
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4: RESULTS -->
+<div class="page" id="pg-results">
+  <nav>
+    <div class="logo" onclick="goDashboard()"><div class="logo-mark">🧠</div>ResumeIQ</div>
+    <div class="nav-links">
+      <button class="nav-link" onclick="goDashboard()">← Dashboard</button>
+      <button class="nav-link" onclick="showPage('pg-analyze')">New Analysis</button>
+    </div>
+    <div class="nav-user">
+      <button class="btn btn-ghost" style="font-size:12px" onclick="doSignout()">Sign Out</button>
+    </div>
+  </nav>
+  <div style="max-width:1060px;margin:0 auto;padding:32px 24px 80px;flex:1" id="resultsContent"></div>
+</div>
+
+<script type="module" src="script.js"></script>
+
+</html>
