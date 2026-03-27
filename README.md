@@ -32,6 +32,27 @@ Other:
 * Resume parsing logic
 * Skill extraction utilities
 
+## 📂 Project Structure
+smart-resume-analyzer
+│
+├── react-version
+│   └── src
+│       ├── components
+│       └── App.jsx
+│
+├── shared-analyzer-engine
+│   └── utils
+│       ├── extractSkills.js
+│       ├── normalizeText.js
+│       └── skillDatabase.js
+│
+├── vanilla-js
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+│
+└── README.md
+
 
 
 ## ⚙️ How It Works
