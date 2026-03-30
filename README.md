@@ -88,6 +88,6 @@ This project was built to:
 
 ---
 
-## 👩‍💻 Author
+##  Author
 
 Ayushi Shivhare
