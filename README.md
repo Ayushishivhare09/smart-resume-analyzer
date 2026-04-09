@@ -32,6 +32,7 @@ Other:
 * Resume parsing logic
 * Skill extraction utilities
 
+
 ## 📂 Project Structure
 smart-resume-analyzer
 │
