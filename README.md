@@ -32,7 +32,7 @@ Other:
 * Resume parsing logic
 * Skill extraction utilities
 
-
+```
 ## 📂 Project Structure
 smart-resume-analyzer
 │
@@ -54,7 +54,7 @@ smart-resume-analyzer
 │
 └── README.md
 
-
+```
 
 ## ⚙️ How It Works
 
