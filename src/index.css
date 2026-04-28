@@ -1,0 +1,279 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   ResumeIQ — Design System
+   All colors are HSL. Components must NEVER hardcode colors.
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* Brand surfaces — light mode */
+    --bg: 45 22% 97%;             /* #F7F6F3 */
+    --surface: 0 0% 100%;          /* #FFFFFF */
+    --text: 244 24% 14%;           /* #1C1B2E */
+    --border-token: 49 16% 87%;    /* #E4E2D8 */
+    --muted-token: 240 7% 46%;     /* #6B6B80 */
+
+    /* Accents — same in both modes */
+    --accent-primary: 244 100% 70%;  /* #6C63FF */
+    --accent-secondary: 173 58% 55%; /* #4ECDC4 */
+
+    /* Semantic status colors */
+    --success: 152 60% 42%;
+    --warning: 38 92% 50%;
+    --danger: 0 75% 60%;
+    --info: 244 100% 70%;
+
+    /* shadcn-compatible aliases (mapped to our tokens so primitives theme correctly) */
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card: var(--surface);
+    --card-foreground: var(--text);
+    --popover: var(--surface);
+    --popover-foreground: var(--text);
+    --primary: var(--accent-primary);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 22% 94%;
+    --secondary-foreground: var(--text);
+    --muted: 45 22% 94%;
+    --muted-foreground: var(--muted-token);
+    --accent: 45 22% 94%;
+    --accent-foreground: var(--text);
+    --destructive: var(--danger);
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--border-token);
+    --input: var(--border-token);
+    --ring: var(--accent-primary);
+
+    --radius: 0.625rem;
+
+    /* Per-column kanban accent hues */
+    --col-wishlist: 244 100% 70%;
+    --col-applied: 200 90% 55%;
+    --col-interview: 38 92% 50%;
+    --col-offer: 152 60% 42%;
+    --col-rejected: 0 75% 60%;
+  }
+
+  .dark {
+    --bg: 240 33% 6%;              /* #0B0B14 */
+    --surface: 240 27% 10%;        /* #12121F */
+    --text: 247 60% 95%;           /* #EEEDF8 */
+    --border-token: 240 26% 15%;   /* #1E1E32 */
+    --muted-token: 240 17% 60%;    /* #8888A8 */
+
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card: var(--surface);
+    --card-foreground: var(--text);
+    --popover: var(--surface);
+    --popover-foreground: var(--text);
+    --primary: var(--accent-primary);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 26% 14%;
+    --secondary-foreground: var(--text);
+    --muted: 240 26% 14%;
+    --muted-foreground: var(--muted-token);
+    --accent: 240 26% 14%;
+    --accent-foreground: var(--text);
+    --destructive: var(--danger);
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--border-token);
+    --input: var(--border-token);
+    --ring: var(--accent-primary);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    transition: background-color 0.25s ease, color 0.25s ease;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: hsl(var(--accent-primary) / 0.25);
+    color: hsl(var(--text));
+  }
+}
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+  }
+
+  .surface-card {
+    background: hsl(var(--surface));
+    border: 1px solid hsl(var(--border-token));
+    border-radius: 18px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .surface-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px hsl(var(--accent-primary) / 0.10);
+  }
+
+  .btn-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+    color: white;
+    border-radius: 12px;
+    transition: filter 0.2s ease, transform 0.2s ease;
+  }
+  .btn-gradient:hover {
+    filter: brightness(1.1);
+    transform: scale(1.02);
+  }
+  .btn-gradient:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+  }
+
+  .btn-ghost-token {
+    background: transparent;
+    border: 1px solid hsl(var(--border-token));
+    border-radius: 12px;
+    color: hsl(var(--text));
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-ghost-token:hover {
+    background: hsl(var(--surface));
+    border-color: hsl(var(--accent-primary) / 0.4);
+  }
+
+  .input-token {
+    background: hsl(var(--surface));
+    border: 1px solid hsl(var(--border-token));
+    border-radius: 10px;
+    color: hsl(var(--text));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .input-token::placeholder { color: hsl(var(--muted-token)); }
+  .input-token:focus {
+    outline: none;
+    border-color: hsl(var(--accent-primary));
+    box-shadow: 0 0 0 2px hsl(var(--accent-primary) / 0.4);
+  }
+
+  .section-pad {
+    padding: 100px 0;
+  }
+  @media (max-width: 768px) {
+    .section-pad { padding: 60px 0; }
+  }
+
+  .container-rq {
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .text-muted-token { color: hsl(var(--muted-token)); }
+  .border-token { border-color: hsl(var(--border-token)); }
+  .bg-surface { background: hsl(var(--surface)); }
+
+  /* shimmer on gradient line */
+  .shimmer {
+    background: linear-gradient(
+      110deg,
+      hsl(var(--accent-primary)) 0%,
+      hsl(var(--accent-secondary)) 35%,
+      hsl(var(--accent-primary)) 70%,
+      hsl(var(--accent-secondary)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shimmer 4s linear infinite;
+  }
+
+  @keyframes shimmer {
+    to { background-position: -200% center; }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--accent-primary) / 0.5);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent-primary) / 0.8);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print stylesheet */
+@media print {
+  [data-print-hide] { display: none !important; }
+  body { background: white !important; color: black !important; }
+  [data-print-target] {
+    position: absolute;
+    inset: 0;
+    background: white !important;
+    color: black !important;
+    padding: 1.5rem !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  [data-print-target] * { color: black !important; background: transparent !important; }
+}
