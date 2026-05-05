@@ -7,11 +7,10 @@ An AI-powered platform that helps you **improve your resume, track job applicati
 ---
 
 ## 📸 Preview
+<img width="1914" height="1017" alt="Screenshot 2026-05-05 235127" src="https://github.com/user-attachments/assets/821f128d-be70-4184-89eb-9dc0d5f4da12" />
 
-<!-- Add screenshots or GIFs here -->
-<!-- Example:
-![Dashboard](./screenshots/dashboard.png)
--->
+<img width="1894" height="1021" alt="Screenshot 2026-05-05 235152" src="https://github.com/user-attachments/assets/829e74eb-a535-4344-a19c-36c9a9e17c94" />
+
 
 ---
 
