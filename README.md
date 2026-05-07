@@ -11,6 +11,8 @@ An AI-powered platform that helps you **improve your resume, track job applicati
 
 <img width="1894" height="1021" alt="Screenshot 2026-05-05 235152" src="https://github.com/user-attachments/assets/829e74eb-a535-4344-a19c-36c9a9e17c94" />
 
+<img width="1910" height="1025" alt="image" src="https://github.com/user-attachments/assets/4090a11e-ce83-4d06-bfb5-59dd609a535e" />
+
 
 ---
 
