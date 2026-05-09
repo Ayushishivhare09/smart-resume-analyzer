@@ -73,7 +73,7 @@ git clone https://github.com/your-username/smart-resume-analyzer.git
 cd smart-resume-analyzer
 npm install
 npm run dev
-
+```
 ---
 ## 📂 Project Structure
 
