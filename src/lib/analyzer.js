@@ -88,12 +88,39 @@ const SIGNAL_PHRASES = [
     "experience with", "experience in", "knowledge of", "proficiency in", "skilled in",
     "expertise in", "background in", "familiarity with", "working with", "hands-on with", "hands on with", "exposure to",
 ];
+const JD_GENERIC_WORDS = new Set([
+    "experience", "qualifications", "qualification", "exposure", "working", "requirements", "requirement",
+    "responsibilities", "responsibility", "role", "team", "strong", "solid", "basic", "good", "excellent",
+    "preferred", "required", "must", "should", "ability", "knowledge", "understanding", "familiarity",
+    "candidate", "company", "business", "communication", "collaboration", "passionate", "motivated",
+    "years", "year", "work", "build", "building", "develop", "development", "create", "creating",
+    "engineer", "developer", "frontend", "front-end", "ui", "ux",
+]);
+const TECH_KEYWORD_CATALOG = [
+    "React.js", "React", "Next.js", "Three.js", "WebGL", "CAD", "Arduino", "ESP32", "TypeScript",
+    "JavaScript", "Tailwind CSS", "Tailwind", "REST API", "REST APIs", "state management", "Vite",
+    "Redux", "Zustand", "HTML", "CSS", "SCSS", "Sass", "Node.js", "Express", "GraphQL", "API",
+    "Git", "GitHub", "Webpack", "Babel", "Jest", "Vitest", "React Testing Library", "Cypress",
+    "Playwright", "Figma", "UI/UX", "responsive design", "accessibility", "WCAG", "DOM", "Canvas",
+    "D3.js", "Chart.js", "Material UI", "MUI", "Bootstrap", "Framer Motion", "Firebase",
+    "Supabase", "MongoDB", "PostgreSQL", "SQL", "NoSQL", "AWS", "Azure", "GCP", "Docker",
+    "Kubernetes", "CI/CD", "Agile", "Scrum", "Jira", "OAuth", "JWT", "WebSockets", "PWA",
+    "performance optimization", "SEO", "micro-frontends", "design system", "component library",
+];
 function tokenize(text) {
     return text
         .toLowerCase()
         .replace(/[^a-z0-9+#./\-\s]/g, " ")
         .split(/\s+/)
         .filter(Boolean);
+}
+function normalizeText(text) {
+    return String(text ?? "")
+        .replace(/\r\n?/g, "\n")
+        .replace(/[\u00A0\u2028\u2029\t]/g, " ")
+        .replace(/[^\S\n]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
 }
 function isFillerWord(w) {
     if (!w)
@@ -107,19 +134,21 @@ function isFillerWord(w) {
     return false;
 }
 function prettify(raw) {
-    const w = raw.trim();
+    let w = raw.trim().replace(/^[,.;:!?]+|[,.;:!?]+$/g, "");
     if (!w)
         return w;
+    w = w.replace(/\b([A-Za-z0-9+#./-]+)(?:\s+\1\b)+/gi, "$1");
     const known = {
-        react: "React", typescript: "TypeScript", javascript: "JavaScript",
+        react: "React.js", "react js": "React.js", "react native": "React Native",
+        typescript: "TypeScript", javascript: "JavaScript",
         nodejs: "Node.js", "node.js": "Node.js", node: "Node.js",
         graphql: "GraphQL", aws: "AWS", gcp: "GCP", azure: "Azure",
         docker: "Docker", kubernetes: "Kubernetes", k8s: "Kubernetes",
         css: "CSS", html: "HTML", sql: "SQL", nosql: "NoSQL", api: "API",
-        rest: "REST", git: "Git", "ci/cd": "CI/CD",
+        rest: "REST", "rest api": "REST API", "rest apis": "REST APIs", git: "Git", "ci/cd": "CI/CD",
         figma: "Figma", python: "Python", java: "Java", go: "Go", rust: "Rust",
-        nextjs: "Next.js", "next.js": "Next.js", vue: "Vue", angular: "Angular",
-        tailwind: "Tailwind", postgres: "PostgreSQL", postgresql: "PostgreSQL",
+        nextjs: "Next.js", "next.js": "Next.js", "next js": "Next.js", vue: "Vue", angular: "Angular",
+        tailwind: "Tailwind CSS", "tailwind css": "Tailwind CSS", postgres: "PostgreSQL", postgresql: "PostgreSQL",
         mongodb: "MongoDB", redis: "Redis", saas: "SaaS", agile: "Agile",
         scrum: "Scrum", jira: "Jira", seo: "SEO", sem: "SEM", crm: "CRM",
         erp: "ERP", hipaa: "HIPAA", gaap: "GAAP", kpi: "KPI", etl: "ETL",
@@ -252,6 +281,80 @@ function extractKeywords(jd, domain) {
     out.sort((a, b) => b.score - a.score);
     return out;
 }
+function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function termRegex(term) {
+    const escaped = escapeRegExp(term).replace(/\\\s+/g, "\\s+");
+    return new RegExp(`(^|[^a-z0-9+#./-])${escaped}(?=$|[^a-z0-9+#./-])`, "i");
+}
+function hasTerm(text, term) {
+    return termRegex(term.toLowerCase()).test(text.toLowerCase());
+}
+function isGenericJDKeyword(raw) {
+    const cleaned = String(raw ?? "").toLowerCase().replace(/[^a-z0-9+#./\-\s]/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleaned)
+        return true;
+    if (JD_GENERIC_WORDS.has(cleaned) || FILLER.has(cleaned))
+        return true;
+    const parts = cleaned.split(/\s+/);
+    return parts.every((p) => JD_GENERIC_WORDS.has(p) || FILLER.has(p));
+}
+function addStrictKeyword(map, raw, score = 1) {
+    if (isGenericJDKeyword(raw))
+        return;
+    const normalized = normalizeKeyword(raw);
+    if (!normalized || isGenericJDKeyword(normalized.canonical))
+        return;
+    const key = normalized.key;
+    const existing = map.get(key);
+    if (existing) {
+        existing.score += score;
+    }
+    else {
+        map.set(key, {
+            display: normalized.canonical,
+            canonical: normalized.canonical,
+            key,
+            score,
+            category: keywordCategory(normalized.canonical),
+        });
+    }
+}
+function extractStrictTechKeywords(jd, domain) {
+    const map = new Map();
+    if (!jd.trim())
+        return [];
+    for (const term of TECH_KEYWORD_CATALOG) {
+        if (hasTerm(jd, term))
+            addStrictKeyword(map, term, 10);
+    }
+    const explicitTechRe = /\b([A-Za-z][A-Za-z0-9.+#-]*(?:\.js|JS|CSS|SQL|API|APIs|CAD|WebGL|WebGL2|UI\/UX)|[A-Z]{2,6}(?:\/[A-Z]{2,6})?|C\+\+|C#)\b/g;
+    let match;
+    while ((match = explicitTechRe.exec(jd)) !== null) {
+        addStrictKeyword(map, match[1], 7);
+    }
+    const phraseRe = /\b([A-Za-z0-9.+#-]+\s+(?:API|APIs|CSS|JS|SQL|CAD|framework|frameworks|library|libraries|testing|management|optimization|design|system|components?|architecture))\b/gi;
+    while ((match = phraseRe.exec(jd)) !== null) {
+        const phrase = match[1].replace(/\b(and|or|with|using|for)$/i, "").trim();
+        addStrictKeyword(map, phrase, 6);
+    }
+    const extracted = normalizeKeywordHits(extractKeywords(jd, domain));
+    for (const hit of extracted) {
+        const lower = hit.display.toLowerCase();
+        const inCatalog = TECH_KEYWORD_CATALOG.some((term) => term.toLowerCase() === lower || term.toLowerCase().includes(lower) || lower.includes(term.toLowerCase()));
+        const techShape = /\.js|\b(api|apis|css|html|sql|nosql|ui|ux|cad|webgl|arduino|esp32|typescript|javascript|react|next|three|vite|tailwind|redux|zustand|figma|git|docker|aws|azure|gcp|testing|state management|design system|component library|accessibility|responsive)\b/i.test(hit.display);
+        if (inCatalog || techShape)
+            addStrictKeyword(map, hit.display, hit.score ?? 4);
+    }
+    if (domain !== "general") {
+        for (const seed of DOMAIN_SEEDS[domain] ?? []) {
+            if (!isGenericJDKeyword(seed) && hasTerm(jd, seed))
+                addStrictKeyword(map, seed, 5);
+        }
+    }
+    return [...map.values()].sort((a, b) => b.score - a.score || a.display.localeCompare(b.display));
+}
 /* ============================================================
  * STEP 3 — Smart matching
  * ============================================================ */
@@ -351,7 +454,8 @@ const KEYWORD_ALIAS_TO_CANONICAL = {
     typescript: "TypeScript",
     html: "HTML",
     css: "CSS",
-    api: "APIs",
+    api: "REST APIs",
+    apis: "REST APIs",
     "soft skills": "Soft Skills",
 };
 
@@ -377,7 +481,11 @@ function normalizeKeyword(raw) {
         .trim();
     if (!cleaned)
         return null;
-    const canonical = KEYWORD_ALIAS_TO_CANONICAL[cleaned] ?? prettify(cleaned);
+    const deduped = cleaned
+        .split(" ")
+        .filter((token, idx, arr) => idx === 0 || token !== arr[idx - 1])
+        .join(" ");
+    const canonical = KEYWORD_ALIAS_TO_CANONICAL[deduped] ?? prettify(deduped);
     return {
         canonical,
         key: canonical.toLowerCase(),
@@ -789,11 +897,13 @@ function simulateATS(score, keywordMatchPercent, formattingScore, impactScore, v
  * STEP 4 — Scoring
  * ============================================================ */
 const SECTION_PATTERNS = [
-    { pts: 5, re: /\b(experience|work\s+experience|employment)\b/i },
-    { pts: 4, re: /\b(education|degree|university|college|school)\b/i },
-    { pts: 4, re: /\b(skills|technical\s+skills|competencies|technologies)\b/i },
-    { pts: 4, re: /\b(projects|portfolio|work\s+samples?|internship)\b/i },
-    { pts: 3, re: /\b(summary|objective|profile|about|overview)\b/i },
+    { name: "Experience", pts: 5, re: /\b(experience|work\s+experience|employment)\b/i },
+    { name: "Education", pts: 5, re: /\b(education|degree|university|college|school)\b/i },
+    { name: "Skills", pts: 5, re: /\b(skills|technical\s+skills|competencies|technologies)\b/i },
+    { name: "Projects", pts: 5, re: /\b(projects|portfolio|work\s+samples?|internship)\b/i },
+    { name: "Achievements", pts: 5, re: /\b(achievements|awards|honou?rs|accomplishments)\b/i },
+    { name: "Certifications", pts: 5, re: /\b(certifications?|licenses?|credentials)\b/i },
+    { name: "Summary", pts: 5, re: /\b(summary|objective|profile|about|overview)\b/i },
 ];
 const ACTION_VERBS = [
     "led", "managed", "built", "developed", "designed", "created", "launched", "shipped", "delivered",
@@ -808,22 +918,92 @@ const ACTION_VERBS = [
     "transformed", "accelerated", "influenced", "advised", "consulted", "secured", "acquired",
 ];
 const ACTION_VERB_SET = new Set(ACTION_VERBS);
+const STRICT_ACTION_VERBS = [
+    "built", "designed", "implemented", "developed", "achieved", "reduced", "improved", "optimized",
+    "shipped", "integrated", "architected", "contributed",
+];
+const STRICT_ACTION_VERB_SET = new Set(STRICT_ACTION_VERBS);
 const IMPACT_NOUNS = [
     "users", "customers", "clients", "people", "team", "members", "projects", "months", "weeks",
     "hours", "revenue", "sales", "tickets", "bugs", "requests", "downloads", "installs", "followers",
     "accounts", "leads", "deals", "calls", "records", "reports", "systems", "applications",
     "products", "campaigns", "countries", "markets", "stores", "locations",
 ];
+function getBulletLines(resume) {
+    return resume
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => /^[-•*–]\s+\S+/.test(line));
+}
+function detectContactInfo(resume) {
+    return /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(resume)
+        || /(?:\+?\d[\d\s().-]{7,}\d)/.test(resume)
+        || /\b(linkedin\.com|github\.com|portfolio|https?:\/\/)\b/i.test(resume);
+}
+function scoreStrictFormatting(resume, sectionInfo, bulletStats) {
+    let score = Math.min(20, (sectionInfo.sectionNames?.length ?? sectionInfo.present.size) * 5);
+    if (bulletStats.totalBullets > 0)
+        score += 5;
+    if (detectContactInfo(resume))
+        score += 5;
+    return Math.min(20, score);
+}
+function scoreStrictClarity(resume) {
+    const bullets = getBulletLines(resume);
+    if (bullets.length === 0)
+        return { score: 0, actionVerbBullets: 0, totalBullets: 0 };
+    const actionVerbBullets = bullets.filter((line) => {
+        const first = line.replace(/^[-•*–]\s+/, "").trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z]/g, "");
+        return STRICT_ACTION_VERB_SET.has(first);
+    }).length;
+    return {
+        score: Math.round((actionVerbBullets / bullets.length) * 35),
+        actionVerbBullets,
+        totalBullets: bullets.length,
+    };
+}
+function scoreStrictImpact(resume) {
+    const metricRe = /(\d+%|[$£€₹]\s?\d[\d,]*|\b\d+(?:\.\d+)?x\b|\b\d[\d,]*\+?\s*(?:users?|customers?|clients?|projects?|months?|weeks?|years?|tickets?|bugs?|sales|revenue|leads?|accounts?|components?|pages?|features?|apis?|milliseconds?|seconds?|hours?)\b)/i;
+    const count = getBulletLines(resume).filter((line) => metricRe.test(line)).length;
+    return { score: Math.min(20, count * 5), count };
+}
+function scoreStrictLength(resume, wordCount) {
+    const lineCount = resume.split(/\r?\n/).filter((line) => line.trim()).length;
+    const estimatedPages = Math.max(Math.ceil(wordCount / 650), Math.ceil(lineCount / 55));
+    return estimatedPages > 3 ? 5 : 10;
+}
+function normalizeSectionLine(line) {
+    return line
+        .replace(/^[#>*\s-]+/, "")
+        .replace(/\*\*/g, "")
+        .replace(/[:：|]+$/g, "")
+        .trim();
+}
 function detectSections(resume) {
-    let pts = 0;
+    const lines = resume.split(/\r?\n/);
     const present = new Set();
-    for (const { pts: p, re } of SECTION_PATTERNS) {
-        if (re.test(resume)) {
-            pts += p;
-            present.add(re.source);
+    for (let i = 0; i < lines.length; i++) {
+        const raw = lines[i];
+        const clean = normalizeSectionLine(raw);
+        if (!clean || clean.length > 60)
+            continue;
+        const lower = clean.toLowerCase();
+        const nextNonEmpty = lines.slice(i + 1).find((l) => l.trim());
+        const followedByBullet = !!nextNonEmpty && /^\s*[-•*–]\s+/.test(nextNonEmpty);
+        const standaloneCaps = clean === clean.toUpperCase() && /[A-Z]{3,}/.test(clean);
+        const boldHeader = /\*\*[^*]+\*\*/.test(raw);
+        for (const { name, re } of SECTION_PATTERNS) {
+            if (re.test(clean) && (standaloneCaps || boldHeader || followedByBullet || clean.split(/\s+/).length <= 4)) {
+                present.add(name);
+            }
+        }
+        if ((standaloneCaps || boldHeader || followedByBullet) && clean.split(/\s+/).length <= 4) {
+            const genericHeader = SECTION_PATTERNS.find(({ re }) => re.test(lower));
+            if (genericHeader)
+                present.add(genericHeader.name);
         }
     }
-    return { points: Math.min(20, pts), present };
+    return { points: Math.min(20, present.size * 5), present, sectionNames: [...present] };
 }
 function detectActionVerbCount(resume) {
     const lines = resume.split(/\r?\n/);
@@ -1021,10 +1201,92 @@ function detectCompany(jd) {
         return m2[1].trim();
     return null;
 }
+function fallbackCandidateName(resume) {
+    const email = resume.match(/([A-Z0-9._%+-]+)@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[1];
+    if (email) {
+        const parts = email.split(/[._-]+/).filter((p) => /^[a-z]+$/i.test(p) && p.length > 1).slice(0, 2);
+        if (parts.length >= 1)
+            return parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+    }
+    return "the candidate";
+}
+function detectResumeHighlights(resume, matchedKeywords) {
+    const lines = resume.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const projectLines = lines
+        .filter((line) => /\b(project|built|developed|designed|implemented|integrated|optimized|shipped|created)\b/i.test(line))
+        .map((line) => line.replace(/^[-•*–]\s*/, "").replace(/\s+/g, " ").trim())
+        .filter((line) => line.length > 12)
+        .slice(0, 3);
+    const skillHits = matchedKeywords.length > 0
+        ? matchedKeywords
+        : TECH_KEYWORD_CATALOG.filter((term) => hasTerm(resume, term)).slice(0, 4);
+    return {
+        skills: [...new Set(skillHits)].slice(0, 4),
+        projects: projectLines,
+    };
+}
+function classifyStrictLevel(score) {
+    if (score >= 90)
+        return "Expert";
+    if (score >= 75)
+        return "Advanced";
+    if (score >= 50)
+        return "Intermediate";
+    return "Beginner";
+}
+function atsVerdict(score, keywordPercent, formattingScore) {
+    if (score >= 80 && keywordPercent >= 65 && formattingScore >= 15)
+        return "Strong Pass";
+    if (score >= 65 && keywordPercent >= 45)
+        return "Likely Pass";
+    if (score >= 45 || keywordPercent >= 30)
+        return "Borderline";
+    return "Likely Reject";
+}
+function buildAtsReasons({ verdict, keywordPercent, formattingPts, clarityPts, impactScore, matchedCount, totalKeywords, sectionNames }) {
+    const reasons = [];
+    reasons.push(`${matchedCount}/${totalKeywords} technical JD keywords matched (${keywordPercent}%).`);
+    reasons.push(sectionNames.length > 0
+        ? `Detected resume sections: ${sectionNames.join(", ")}.`
+        : "Few recognizable resume section headers were detected.");
+    reasons.push(`Clarity score is ${clarityPts}/35 based on action-verb bullet ratio.`);
+    if (impactScore > 0)
+        reasons.push(`${Math.round(impactScore / 5)} bullet(s) include numbers, percentages, or concrete metrics.`);
+    else
+        reasons.push("No metric-backed bullets were detected, reducing recruiter confidence.");
+    reasons.push(`ATS verdict: ${verdict}.`);
+    return reasons;
+}
+function buildStrictSuggestions({ missing, clarityDetail, impactDetail, sectionInfo, hasContact }) {
+    const out = [];
+    if (missing.length > 0)
+        out.push({ priority: "HIGH", icon: "🎯", text: `Add relevant JD technical keywords where truthful: ${missing.slice(0, 4).join(", ")}.` });
+    if (clarityDetail.totalBullets === 0 || clarityDetail.score < 20)
+        out.push({ priority: "HIGH", icon: "⚡", text: "Rewrite bullets to start with strong action verbs such as Built, Designed, Implemented, Developed, Optimized, or Integrated." });
+    if (impactDetail.count < 2)
+        out.push({ priority: "MED", icon: "📈", text: "Add metrics to project and experience bullets, such as performance improvements, user counts, latency reductions, or delivery timelines." });
+    if ((sectionInfo.sectionNames?.length ?? 0) < 4)
+        out.push({ priority: "MED", icon: "🧩", text: "Use clear standalone section headers like Summary, Skills, Projects, Experience, Education, Achievements, and Certifications." });
+    if (!hasContact)
+        out.push({ priority: "HIGH", icon: "☎️", text: "Add ATS-readable contact information: email, phone, LinkedIn/GitHub, or portfolio URL." });
+    out.push({ priority: "LOW", icon: "🔧", text: "Prioritize the top third of the resume for the frontend stack and projects most relevant to this JD." });
+    return out.slice(0, 6);
+}
 function buildCoverLetter(opts) {
-    const name = opts.name ?? "[Your Name]";
-    const role = opts.role ?? "[Your Role]";
-    const company = opts.company ?? "[Company Name]";
+    const name = opts.name ?? fallbackCandidateName(opts.resumeText ?? "");
+    const role = opts.role ?? `${DOMAIN_LABELS[opts.domain] ?? "Software"} Engineering role`;
+    const company = opts.company ?? "your team";
+    const highlights = detectResumeHighlights(opts.resumeText ?? "", opts.matchedKeywords ?? []);
+    const skillsLine = highlights.skills.length > 0
+        ? highlights.skills.slice(0, 3).join(", ")
+        : `${DOMAIN_LABELS[opts.domain] ?? "technical"} development`;
+    const projectLine = highlights.projects.length > 0
+        ? `Specific work that stands out includes ${highlights.projects.slice(0, 2).join("; ")}.`
+        : `The resume shows practical experience with ${skillsLine}, which aligns with the technical requirements in the job description.`;
+    const jdRefs = (opts.topKeywords ?? []).slice(0, 3).join(", ");
+    const jdLine = jdRefs
+        ? `Your job description emphasizes ${jdRefs}, and ${name}'s background shows direct overlap through ${skillsLine}.`
+        : `${name}'s background aligns with the technical expectations described in the job description.`;
     let opening;
     if (TECH_DOMAINS.includes(opts.domain)) {
         opening = `I am excited to apply for the ${role} position at ${company}.`;
@@ -1038,17 +1300,17 @@ function buildCoverLetter(opts) {
     else {
         opening = `I am writing to express my interest in the ${role} position at ${company}.`;
     }
-    const verbHits = ACTION_VERBS.filter((v) => new RegExp(`\\b${v}\\b`, "i").test(opts.resumeText)).slice(0, 3);
+    const verbHits = STRICT_ACTION_VERBS.filter((v) => new RegExp(`\\b${escapeRegExp(v)}\\b`, "i").test(opts.resumeText ?? "")).slice(0, 3);
     const verbsLine = verbHits.length
-        ? `In recent roles I have ${verbHits.join(", ")} initiatives that moved real numbers`
-        : "I focus on shipping work that moves real numbers";
+        ? `In recent work, ${name} has ${verbHits.join(", ")} technical initiatives using ${skillsLine}`
+        : `${name} brings hands-on technical experience with ${skillsLine}`;
     return `Dear Hiring Manager,
 
-${opening} After reading the job description carefully, I am confident that my background lines up closely with what your team is looking for, and I would welcome the chance to contribute.
+${opening} ${jdLine}
 
-${verbsLine}, and I bring a habit of pairing thoughtful execution with measurable outcomes. I care about clear communication with teammates and shipping work I would happily put my name on.
+${verbsLine}. ${projectLine}
 
-I would love to talk more about how I could help ${company} keep building. Thank you for taking the time to read this — I have attached my resume and look forward to hearing from you.
+I would welcome the opportunity to discuss how ${name}'s ${DOMAIN_LABELS[opts.domain] ?? "technical"} engineering skills can support ${company}'s product goals. Thank you for your time and consideration.
 
 Warm regards,
 ${name}`;
@@ -1136,14 +1398,14 @@ export function detectJobTitle(text, jd) {
     return detectRole(jd) ?? detectRole(text);
 }
 export function analyze(resumeText, jobDescription) {
-    const resume = resumeText ?? "";
-    const jd = jobDescription ?? "";
+    const resume = normalizeText(resumeText);
+    const jd = normalizeText(jobDescription);
     const wordCount = resume.trim() ? resume.trim().split(/\s+/).length : 0;
     const domain = detectDomain(jd);
     const domainLabel = DOMAIN_LABELS[domain];
 
-    // Keyword extraction + smart normalization/deduplication
-    const extracted = normalizeKeywordHits(extractKeywords(jd, domain));
+    // Strict JD keyword extraction: technical skills/tools/frameworks/domain terms only.
+    const extracted = extractStrictTechKeywords(jd, domain);
     const totalForMatch = extracted.length;
     const idx = buildResumeIndex(resume);
     const found = [];
@@ -1161,30 +1423,25 @@ export function analyze(resumeText, jobDescription) {
 
     const hasJD = jd.trim().length > 0;
     const keywordMatchPercent = totalForMatch > 0 ? Math.round((found.length / totalForMatch) * 100) : 0;
-    const keywordPts = hasJD
-        ? Math.round((keywordMatchPercent / 100) * 35)
-        : Math.min(20, Math.max(8, Math.round((detectSections(resume).points / 20) * 20)));
+    const keywordPts = totalForMatch > 0 ? Math.round((found.length / totalForMatch) * 35) : 0;
 
     const sectionInfo = detectSections(resume);
     const bulletStats = detectBulletStats(resume);
     const metricSignals = detectMetricSignals(resume);
     const vagueSignals = detectVagueStatements(resume);
-
     const formattingDetail = analyzeFormattingDetailed(resume, wordCount, sectionInfo, bulletStats);
-    const formattingPts = formattingDetail.score; // /20
 
-    const verbCount = detectActionVerbCount(resume);
-    const baseVerbPts = scoreActionVerbs(verbCount);
-    const clarityPts = Math.max(0, Math.min(15, baseVerbPts - Math.min(5, vagueSignals.count) + (bulletStats.totalBullets >= 4 ? 2 : 0))); // /15
+    const formattingPts = scoreStrictFormatting(resume, sectionInfo, bulletStats); // /20
+    const clarityDetail = scoreStrictClarity(resume);
+    const clarityPts = clarityDetail.score; // /35
+    const impactDetail = scoreStrictImpact(resume);
+    const impactPts = impactDetail.score; // /20, reported separately
+    const impactCount = impactDetail.count;
+    const lengthPts = scoreStrictLength(resume, wordCount); // /10
+    const verbCount = clarityDetail.actionVerbBullets;
 
-    const impactCount = detectImpactCount(resume);
-    const impactPts15 = scoreImpact(impactCount);
-    const impactPts = Math.max(0, Math.min(20, Math.round((impactPts15 / 15) * 16) + Math.min(4, metricSignals.count))); // /20
-
-    const lengthPts = scoreLength(wordCount);
-
-    // Total score out of 100 (35 + 20 + 20 + 15 + 10)
-    const score = Math.min(100, keywordPts + formattingPts + impactPts + clarityPts + lengthPts);
+    // Overall score follows the requested 100-point ATS rubric: formatting + clarity + keywords + length.
+    const score = Math.min(100, formattingPts + clarityPts + keywordPts + lengthPts);
 
     const lengthReason = wordCount < 320
         ? "Resume is shorter than ideal; add more role-specific bullets."
@@ -1200,6 +1457,20 @@ export function analyze(resumeText, jobDescription) {
     const yearsEstimate = estimateExperienceYears(resume);
     const experienceLevel = detectExperienceLevel(resume, yearsEstimate);
     const strengthLevel = classifyStrengthLevel(score, keywordMatchPercent, experienceLevel, hasJD);
+    const level = classifyStrictLevel(score);
+    const verdict = atsVerdict(score, keywordMatchPercent, formattingPts);
+    const confidence = Math.max(0, Math.min(100, Math.round((score * 0.65) + (keywordMatchPercent * 0.25) + (formattingPts / 20) * 10)));
+    const hasContact = detectContactInfo(resume);
+    const atsReasons = buildAtsReasons({
+        verdict,
+        keywordPercent: keywordMatchPercent,
+        formattingPts,
+        clarityPts,
+        impactScore: impactPts,
+        matchedCount: found.length,
+        totalKeywords: totalForMatch,
+        sectionNames: sectionInfo.sectionNames ?? [],
+    });
 
     const insights = buildInsightSections({
         keywordMatchPercent,
@@ -1220,13 +1491,17 @@ export function analyze(resumeText, jobDescription) {
         impactCount,
         hasSkills: SECTION_PATTERNS[2].re.test(resume),
         hasProjects: SECTION_PATTERNS[3].re.test(resume),
-        hasSummary: SECTION_PATTERNS[4].re.test(resume),
+        hasSummary: SECTION_PATTERNS[6].re.test(resume),
         wordCount,
         yearMatches: (resume.match(/\b(19|20)\d{2}\b/g) || []).length,
         score,
         sectionPoints: sectionInfo.points,
     });
-    const suggestions = [...flattenInsightsToSuggestions(insights), ...legacySuggestions]
+    const suggestions = [
+        ...buildStrictSuggestions({ missing, clarityDetail, impactDetail, sectionInfo, hasContact }),
+        ...flattenInsightsToSuggestions(insights),
+        ...legacySuggestions,
+    ]
         .filter((s, i, arr) => arr.findIndex((x) => x.text === s.text) === i)
         .slice(0, 8);
 
@@ -1263,12 +1538,11 @@ export function analyze(resumeText, jobDescription) {
         clarity: {
             label: "Clarity & Action Verbs",
             score: clarityPts,
-            max: 15,
+            max: 35,
             actionVerbs: verbCount,
+            totalBullets: clarityDetail.totalBullets,
             vagueStatements: vagueSignals.count,
-            reason: vagueSignals.count > 0
-                ? `${vagueSignals.count} vague statements reduce clarity.`
-                : "Strong action-oriented writing style.",
+            reason: `${clarityDetail.actionVerbBullets}/${clarityDetail.totalBullets} bullets start with strict action verbs.`,
         },
         length: {
             label: "Length Balance",
@@ -1280,7 +1554,7 @@ export function analyze(resumeText, jobDescription) {
 
     const sub = {
         formatting: Math.min(20, formattingPts),
-        clarity: Math.min(35, clarityPts + Math.round((impactPts / 20) * 20)),
+        clarity: Math.min(35, clarityPts),
         keywords: Math.min(35, keywordPts),
     };
 
@@ -1291,6 +1565,17 @@ export function analyze(resumeText, jobDescription) {
 
     return {
         score,
+        level,
+        formatting: formattingPts,
+        clarity: clarityPts,
+        keywords: keywordPts,
+        impactScore: impactPts,
+        lengthScore: lengthPts,
+        atsVerdict: verdict,
+        atsConfidence: confidence,
+        atsReasons,
+        matchedKeywords: found,
+        missingKeywords: missing,
         subScores: sub,
         wordCount,
         jobTitle: role,
@@ -1324,7 +1609,7 @@ export function analyze(resumeText, jobDescription) {
         experienceYearsEstimate: yearsEstimate,
         atsSimulation,
         suggestions,
-        coverLetter: buildCoverLetter({ name, role, company, domain, resumeText: resume }),
+        coverLetter: buildCoverLetter({ name, role, company, domain, resumeText: resume, matchedKeywords: found, topKeywords: topKws }),
         interviewQuestions: buildInterviewQuestions(domain, domainLabel, topKws),
     };
 }

@@ -198,19 +198,13 @@ export function InputPanel({ resume, setResume, jd, setJd, options, setOptions, 
           <CB checked={options.interview} onChange={(value) => setOptions({ ...options, interview: value })}>Interview prep</CB>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col items-center gap-4">
           <div className="text-xs text-muted-token">Resume text is required to run the analysis.</div>
           <button
             type="button"
             onClick={onAnalyze}
             disabled={loading || !resume.trim()}
-            className="
-            width:100%;padding:36px;border-radius:12px;background:linear-gradient(135deg,var(--a),var(--a2));border:none;color:white;font-family:var(--font);font-size:100px;font-weight:1000;cursor:pointer;transition:all .3s;letter-spacing:-.01em" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''bg-gradient-to-r from-blue-500 to-purple-500 
-               text-white font-semibold px-6 py-3 rounded-xl
-               flex items-center gap-2
-               transition-all duration-300
-               hover:scale-105 hover:shadow-[0_8px_25px_rgba(91,156,255,0.5)] 
-               active:scale-95"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-sky-500 via-cyan-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
