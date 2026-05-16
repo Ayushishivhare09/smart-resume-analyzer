@@ -77,11 +77,15 @@ npm run dev
 ---
 ## 📂 Project Structure
 
-src/
- ├── components/
- ├── pages/
- ├── hooks/
- ├── services/
- ├── utils/
+├── public/
+├── src/
+│ ├── components/
+│ ├── pages/
+│ ├── services/
+│ ├── types/
+│ ├── App.tsx
+│ └── main.tsx
+├── package.json
+└── vite.config.ts
 
 
